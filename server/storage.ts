@@ -449,7 +449,7 @@ export class DrizzleStorage implements IStorage {
       const statements = [
         `CREATE TABLE IF NOT EXISTS media_items (
           id TEXT PRIMARY KEY,
-          url TEXT UNIQUE NOT NULL,
+          url TEXT NOT NULL,
           title TEXT,
           description TEXT,
           thumbnail TEXT,

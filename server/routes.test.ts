@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { startServer, stopServer } from './index';
-import { scrapeWithPlaywright } from './scraper';
+import { getSingleFileInfo } from './new-scraper';
 
-vi.mock('./scraper.ts', () => ({
-  scrapeWithPlaywright: vi.fn().mockResolvedValue([
+vi.mock('./new-scraper.ts', () => ({
+  getSingleFileInfo: vi.fn().mockResolvedValue(
     {
       url: 'http://example.com/video.mp4',
       title: 'Scraped Title',
       description: 'Scraped description.',
       thumbnail: 'http://example.com/thumbnail.jpg',
     },
-  ]),
+  ),
 }));
 import type { Server } from 'http';
 import type { Express } from 'express';
@@ -49,6 +49,24 @@ describe('API Routes', () => {
     expect(response.body[0].url).toBe('http://example.com/video.mp4');
   });
 
+  it('should allow creating a duplicate media item', async () => {
+    const url = 'http://example.com/duplicate-video.mp4';
+    // Create the first item
+    await request(app)
+      .post('/api/media')
+      .send({ urls: [url] });
+
+    // Create the second item with the same URL
+    const response = await request(app)
+      .post('/api/media')
+      .send({ urls: [url] });
+    expect(response.status).toBe(201);
+    expect(response.body).toBeInstanceOf(Array);
+    expect(response.body.length).toBe(1);
+    expect(response.body[0].url).toBe(url);
+    expect(response.body[0].status).toBe('created_duplicate');
+  });
+
   it('should create and get a tag', async () => {
     const createResponse = await request(app)
       .post('/api/tags')
@@ -79,7 +97,7 @@ describe('API Routes', () => {
     const createResponse = await request(app)
       .post('/api/media')
       .send({ urls: ['http://example.com/video2.mp4'] });
-    const mediaId = createResponse.body[0].id;
+    const mediaId = createResponse.body[0].item.id;
 
     const response = await request(app).post(`/api/media/${mediaId}/metadata`);
     expect(response.status).toBe(200);
@@ -93,7 +111,7 @@ describe('API Routes', () => {
     const createResponse = await request(app)
       .post('/api/media')
       .send({ urls: ['http://example.com/video3.mp4'] });
-    const mediaId = createResponse.body[0].id;
+    const mediaId = createResponse.body[0].item.id;
 
     const response = await request(app).post(`/api/media/${mediaId}/refresh`);
     expect(response.status).toBe(200);
