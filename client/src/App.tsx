@@ -33,7 +33,11 @@ import PlayerPage from "@/pages/player";
 import NotFound from "@/pages/not-found";
 import { useEffect, useState } from 'react';
 
+import { useLocation } from "wouter";
+
 function AppRouter() {
+  const [location] = useLocation();
+  console.log("Current location:", location);
   return (
     <Switch>
       <Route path="/" component={Home} />

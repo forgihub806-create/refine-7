@@ -314,6 +314,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
         // Use hash routing in Electron
         const isElectron = typeof window !== 'undefined' && window.electronEnv?.isElectron;
         const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
+        console.log('Navigating to player path:', playerPath);
         if (isElectron) {
           window.location.hash = playerPath;
         } else {
