@@ -1,10 +1,13 @@
-import { useSearchParams } from "wouter";
+import { useLocation } from "wouter";
 import { VideoPlayer } from "@/components/video-player";
 
 export default function PlayerPage() {
-  const [searchParams] = useSearchParams();
-  const videoUrl = searchParams.get('url');
-  const title = searchParams.get('title') || 'Video Player';
+  const [location] = useLocation();
+  // location is a string like "/player?url=...&title=..." or "#/player?url=...&title=..."
+  const queryString = location.includes('?') ? location.split('?')[1] : '';
+  const params = new URLSearchParams(queryString);
+  const videoUrl = params.get('url');
+  const title = params.get('title') || 'Video Player';
 
   if (!videoUrl) {
     return (
