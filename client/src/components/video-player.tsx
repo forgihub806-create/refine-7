@@ -95,6 +95,14 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
           setShowControls(true);
           setTimeout(() => setShowControls(false), 3000);
         }}
+        onError={(e) => {
+          console.error('Video loading error:', e);
+          console.error('Video URL:', url);
+        }}
+        onLoadStart={() => console.log('Video loading started:', url)}
+        onCanPlay={() => console.log('Video can start playing')}
+        crossOrigin="anonymous"
+        preload="metadata"
       />
       
       {/* Controls Overlay */}

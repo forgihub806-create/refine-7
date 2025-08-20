@@ -3,15 +3,25 @@ import { VideoPlayer } from "@/components/video-player";
 
 export default function PlayerPage() {
   const [location] = useLocation();
-  // location is a string like "/player?url=...&title=..." or "#/player?url=...&title=..."
-  const queryString = location.includes('?') ? location.split('?')[1] : '';
+  
+  // Handle both hash-based and regular query parameters
+  let queryString = '';
+  if (location.includes('?')) {
+    queryString = location.split('?')[1];
+  } else {
+    // Check if we're using hash-based routing with query params
+    const hash = window.location.hash;
+    if (hash.includes('?')) {
+      queryString = hash.split('?')[1];
+    }
+  }
+  
   const params = new URLSearchParams(queryString);
   const videoUrl = params.get('url');
   const title = params.get('title') || 'Video Player';
 
   // Debug log to confirm route is hit and show received params
-  // eslint-disable-next-line no-console
-  console.log('[PlayerPage] Route hit. videoUrl:', videoUrl, 'title:', title, 'location:', location);
+  console.log('[PlayerPage] Route hit. videoUrl:', videoUrl, 'title:', title, 'location:', location, 'hash:', window.location.hash);
 
   if (!videoUrl) {
     return (
