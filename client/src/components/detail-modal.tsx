@@ -112,7 +112,6 @@ const formatDuration = (seconds: number | null) => {
 };
 
 export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
-  const [playableUrl, setPlayableUrl] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -164,23 +163,14 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
   });
 
   const getDownloadUrlMutation = useMutation({
-    mutationFn: ({ apiId, mediaUrl }: { apiId: string, mediaUrl: string }) => getDownloadUrl(mediaId, apiId, mediaUrl),
+    mutationFn: async ({ apiId, mediaUrl }: { apiId: string, mediaUrl: string }) => {
+        const data = await getDownloadUrl(mediaId, apiId, mediaUrl);
+        return { ...data, source: apiId };
+    },
     onSuccess: (data) => {
       try {
-        const proxyData = JSON.parse(data.proxyResponse);
-        let downloadUrl = null;
-
-        switch (data.source) {
-          case 'IteraPlay':
-            downloadUrl = proxyData.list?.[0]?.fast_stream_url?.['720p'];
-            break;
-          case 'TeraFast':
-            downloadUrl = proxyData.data?.download_link;
-            break;
-          default:
-            downloadUrl = proxyData.downloadUrl || proxyData.url || (proxyData.data && proxyData.data.url);
-            break;
-        }
+        const proxyData = data;
+        const downloadUrl = extractPlayableUrl(proxyData);
 
         if (downloadUrl && mediaItem) {
           // TypeScript: extend window type for electronAPI.downloadFile
@@ -253,14 +243,18 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
   };
 
   const getPlayUrlMutation = useMutation({
-    mutationFn: (apiId: string) => getDownloadUrl(mediaId, apiId, mediaItem!.url),
+    mutationFn: async (apiId: string) => {
+        const data = await getDownloadUrl(mediaId, apiId, mediaItem!.url);
+        return { ...data, source: apiId };
+    },
     onSuccess: (data) => {
       try {
-        const proxyData = data; // data is the proxy response
+        const proxyData = data;
         const playUrl = extractPlayableUrl(proxyData);
 
-        if (playUrl) {
-          setPlayableUrl(playUrl);
+        if (playUrl && mediaItem) {
+          const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
+          navigate(playerPath);
         } else {
           throw new Error("Could not find a playable URL in the response. See console for details.");
         }
@@ -373,33 +367,23 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
           {/* Left Panel - Media Preview */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              {playableUrl ? (
-                <VideoPlayer
-                  url={playableUrl}
-                  title={mediaItem.title}
-                  onClose={() => setPlayableUrl(null)}
+              {mediaItem.thumbnail ? (
+                <img
+                  src={mediaItem.thumbnail}
+                  alt={mediaItem.title}
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <>
-                  {mediaItem.thumbnail ? (
-                    <img
-                      src={mediaItem.thumbnail}
-                      alt={mediaItem.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                      <Video className="text-primary text-8xl" />
-                    </div>
-                  )}
-                  {mediaItem.duration && (
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
-                        Duration: {formatDuration(mediaItem.duration)}
-                      </div>
-                    </div>
-                  )}
-                </>
+                <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                  <Video className="text-primary text-8xl" />
+                </div>
+              )}
+              {mediaItem.duration && (
+                <div className="absolute bottom-4 left-4 text-white">
+                  <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
+                    Duration: {formatDuration(mediaItem.duration)}
+                  </div>
+                </div>
               )}
             </div>
 
