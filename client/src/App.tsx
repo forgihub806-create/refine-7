@@ -29,6 +29,7 @@ import Home from "@/pages/home";
 import AddMedia from "@/pages/add-media";
 import Settings from "@/pages/settings";
 import DuplicatesPage from "@/pages/duplicates";
+import PlayerPage from "@/pages/player";
 import NotFound from "@/pages/not-found";
 import { useEffect, useState } from 'react';
 
@@ -39,6 +40,7 @@ function AppRouter() {
       <Route path="/add-media" component={AddMedia} />
       <Route path="/settings" component={Settings} />
       <Route path="/duplicates" component={DuplicatesPage} />
+      <Route path="/player"><PlayerPage /></Route>
       <Route component={NotFound} />
     </Switch>
   );

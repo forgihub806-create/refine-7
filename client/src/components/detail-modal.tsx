@@ -124,7 +124,7 @@ const formatDuration = (seconds: number | null) => {
 };
 
 export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
-  const [playableUrl, setPlayableUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -305,8 +305,9 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
       }
       // Log before extraction
       const playUrl = extractPlayableUrl(proxyData);
-      if (playUrl) {
-        setPlayableUrl(playUrl);
+      if (playUrl && mediaItem) {
+        const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
+        navigate(playerPath);
       } else {
         throw new Error("Could not find a playable URL in the response. See console for details.");
       }
@@ -424,11 +425,11 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
           {/* Left Panel - Media Preview */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              {playableUrl ? (
+              {isPlaying && mediaItem.downloadUrl ? (
                 <VideoPlayer
-                  url={playableUrl}
+                  url={mediaItem.downloadUrl}
                   title={mediaItem.title}
-                  onClose={() => setPlayableUrl(null)}
+                  onClose={() => setIsPlaying(false)}
                 />
               ) : (
                 <>
@@ -452,14 +453,9 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                         <Button
                           onClick={handlePlay}
-                          disabled={getPlayUrlMutation.isPending}
                           className="w-16 h-16 bg-primary rounded-full flex items-center justify-center hover:bg-primary/80"
                         >
-                          {getPlayUrlMutation.isPending ? (
-                            <RefreshCw className="w-6 h-6 animate-spin" />
-                          ) : (
-                            <Play className="text-white text-xl ml-1" />
-                          )}
+                          <Play className="text-white text-xl ml-1" />
                         </Button>
                       </div>
                       {mediaItem.duration && (
