@@ -124,7 +124,6 @@ const formatDuration = (seconds: number | null) => {
 };
 
 export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -425,56 +424,30 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
           {/* Left Panel - Media Preview */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              {isPlaying && mediaItem.downloadUrl ? (
-                <VideoPlayer
-                  url={mediaItem.downloadUrl}
-                  title={mediaItem.title}
-                  onClose={() => setIsPlaying(false)}
+              {mediaItem.thumbnail ? (
+                <img
+                  src={mediaItem.thumbnail}
+                  alt={mediaItem.title}
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <>
-                  {isFolder ? (
-                    <div className="w-full h-full bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center">
-                      <Folder className="text-amber-500 text-8xl" />
-                    </div>
-                  ) : (
-                    <>
-                      {mediaItem.thumbnail ? (
-                        <img
-                          src={mediaItem.thumbnail}
-                          alt={mediaItem.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                          <Video className="text-primary text-8xl" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                        <Button
-                          onClick={handlePlay}
-                          className="w-16 h-16 bg-primary rounded-full flex items-center justify-center hover:bg-primary/80"
-                        >
-                          <Play className="text-white text-xl ml-1" />
-                        </Button>
-                      </div>
-                      {mediaItem.duration && (
-                        <div className="absolute bottom-4 left-4 text-white">
-                          <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
-                            Duration: {formatDuration(mediaItem.duration)}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
+                <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                  <Video className="text-primary text-8xl" />
+                </div>
+              )}
+              {mediaItem.duration && (
+                <div className="absolute bottom-4 left-4 text-white">
+                  <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
+                    Duration: {formatDuration(mediaItem.duration)}
+                  </div>
+                </div>
               )}
             </div>
 
             {/* API Selection */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Download Options</h3>
+                <h3 className="text-lg font-semibold">Actions</h3>
                 <Button
                   variant="outline"
                   size="sm"
@@ -487,6 +460,14 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
                 </Button>
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={handlePlay}
+                  disabled={getPlayUrlMutation.isPending}
+                  className="w-full justify-start"
+                >
+                  <Play className={`h-4 w-4 mr-2 ${getPlayUrlMutation.isPending ? 'animate-spin' : ''}`} />
+                  Play Video
+                </Button>
                 {apiOptions.map((api) => (
                   <Button
                     key={api.id}
