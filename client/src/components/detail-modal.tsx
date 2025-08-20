@@ -9,74 +9,62 @@ import { refreshMetadata, deleteMediaItem as deleteMediaItemApi, checkAndFetchMe
 import { useToast } from "@/hooks/use-toast";
 import type { MediaItemWithTagsAndCategories, ApiOption } from "@shared/schema";
 // Utility to extract a playable video URL from various API responses
-function extractPlayableUrl(proxyData: any): string | null {
-  try {
-    // Try common fields
-    if (typeof proxyData === 'string' && proxyData.startsWith('http')) return proxyData;
-    if (proxyData.streamUrl) return proxyData.streamUrl;
-    if (proxyData.downloadUrl) return proxyData.downloadUrl;
-    if (proxyData.url && typeof proxyData.url === 'string' && proxyData.url.startsWith('http')) return proxyData.url;
-    if (proxyData.playableUrl) return proxyData.playableUrl;
-    // IteraPlay/fast_stream_url
-    if (proxyData.list?.[0]?.fast_stream_url) {
-      const fast = proxyData.list[0].fast_stream_url;
-      const preferred = ['1080p', '720p', '480p', '360p'];
-      for (const res of preferred) {
-        if (fast[res]) return fast[res];
-      }
-      const available = Object.values(fast).find((v) => typeof v === 'string' && v.startsWith('http'));
-      if (available) return available as string;
-      return null;
+function extractPlayableUrl(proxyData: any, quality: '1080p' | '720p' | '480p' | '360p' = '720p'): string | null {
+  if (!proxyData) return null;
+
+  // Prioritize fast_stream_url as requested
+  if (proxyData.list?.[0]?.fast_stream_url) {
+    const fast = proxyData.list[0].fast_stream_url;
+    const preferred = [quality, '1080p', '720p', '480p', '360p'];
+    for (const res of preferred) {
+      if (fast[res]) return fast[res];
     }
-    // PlayerTera/qualities
-    if (proxyData.qualities && typeof proxyData.qualities === 'object') {
-      return (
-        proxyData.qualities['1080p']?.url ||
-        proxyData.qualities['720p']?.url ||
-        proxyData.qualities['480p']?.url ||
-        proxyData.qualities['360p']?.url ||
-        null
-      );
-    }
-    // Nested data
-    if (proxyData.data?.download_link) return proxyData.data.download_link;
-    if (proxyData.data?.url) return proxyData.data.url;
-    // Try array of urls
-    if (Array.isArray(proxyData.urls) && proxyData.urls.length > 0) {
-      if (typeof proxyData.urls[0] === 'string' && proxyData.urls[0].startsWith('http')) return proxyData.urls[0];
-      if (proxyData.urls[0]?.url) return proxyData.urls[0].url;
-    }
-    // Try nested list (IteraPlay, TeraBox, etc.)
-    if (Array.isArray(proxyData.list) && proxyData.list.length > 0) {
-      const first = proxyData.list[0];
-      // Check common fields
-      if (first.url && typeof first.url === 'string' && first.url.startsWith('http')) return first.url;
-      if (first.downloadUrl && typeof first.downloadUrl === 'string' && first.downloadUrl.startsWith('http')) return first.downloadUrl;
-      if (first.fast_stream_url) {
-        const fast = first.fast_stream_url;
-        const preferred = ['1080p', '720p', '480p', '360p'];
-        for (const res of preferred) {
-          if (fast[res]) return fast[res];
-        }
-        const available = Object.values(fast).find((v) => typeof v === 'string' && v.startsWith('http'));
-        if (available) return available as string;
-        return null;
-      }
-      // Fallback: any string field that looks like a URL
-      for (const key in first) {
-        if (typeof first[key] === 'string' && first[key].startsWith('http')) return first[key];
-      }
-    }
-    // Try any field that looks like a url
-    for (const key in proxyData) {
-      if (typeof proxyData[key] === 'string' && proxyData[key].startsWith('http')) return proxyData[key];
-    }
-    return null;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Error in extractPlayableUrl:', err, proxyData);
-    return null;
+    const available = Object.values(fast).find((v) => typeof v === 'string' && v.startsWith('http'));
+    if (available) return available as string;
   }
+
+  // PlayerTera/qualities
+  if (proxyData.qualities && typeof proxyData.qualities === 'object') {
+    const preferred = [quality, '1080p', '720p', '480p', '360p'];
+    for (const res of preferred) {
+        if (proxyData.qualities[res]?.url) return proxyData.qualities[res]?.url;
+    }
+  }
+
+  // Common fields
+  if (typeof proxyData === 'string' && proxyData.startsWith('http')) return proxyData;
+  if (proxyData.streamUrl) return proxyData.streamUrl;
+  if (proxyData.downloadUrl) return proxyData.downloadUrl;
+  if (proxyData.url && typeof proxyData.url === 'string' && proxyData.url.startsWith('http')) return proxyData.url;
+  if (proxyData.playableUrl) return proxyData.playableUrl;
+
+  // Nested data
+  if (proxyData.data?.download_link) return proxyData.data.download_link;
+  if (proxyData.data?.url) return proxyData.data.url;
+
+  // Try array of urls
+  if (Array.isArray(proxyData.urls) && proxyData.urls.length > 0) {
+    if (typeof proxyData.urls[0] === 'string' && proxyData.urls[0].startsWith('http')) return proxyData.urls[0];
+    if (proxyData.urls[0]?.url) return proxyData.urls[0].url;
+  }
+
+  // Fallback for nested list (IteraPlay, TeraBox, etc.)
+  if (Array.isArray(proxyData.list) && proxyData.list.length > 0) {
+    const first = proxyData.list[0];
+    if (first.url && typeof first.url === 'string' && first.url.startsWith('http')) return first.url;
+    if (first.downloadUrl && typeof first.downloadUrl === 'string' && first.downloadUrl.startsWith('http')) return first.downloadUrl;
+    // Fallback: any string field that looks like a URL
+    for (const key in first) {
+      if (typeof first[key] === 'string' && first[key].startsWith('http')) return first[key];
+    }
+  }
+
+  // Fallback: any field that looks like a url
+  for (const key in proxyData) {
+    if (typeof proxyData[key] === 'string' && proxyData[key].startsWith('http')) return proxyData[key];
+  }
+
+  return null;
 }
 import { TagCategoryManager } from "./tag-category-manager";
 import { useLocation } from "wouter";
@@ -265,61 +253,26 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
 
   const getPlayUrlMutation = useMutation({
     mutationFn: (apiId: string) => getDownloadUrl(mediaId, apiId, mediaItem!.url),
-  onSuccess: (data) => {
-    try {
-      // Support both: data.proxyResponse (string/object) and direct data (object)
-      let proxyData: any = undefined;
-      if (data && typeof data === 'object' && 'proxyResponse' in data && data.proxyResponse) {
-        proxyData = data.proxyResponse;
-        if (typeof proxyData === 'string') {
-          try {
-            proxyData = JSON.parse(proxyData);
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error('Failed to parse proxyResponse string:', proxyData, err);
-            throw new Error('proxyResponse was not valid JSON. See console for details.');
-          }
-        }
-      } else if (data && typeof data === 'object' && 'list' in data) {
-        proxyData = data;
-      } else {
-        // eslint-disable-next-line no-console
-        console.error('No valid proxyResponse or list found in data:', data);
-        throw new Error('API did not return a valid response. See console for details.');
-      }
+    onSuccess: (data) => {
+      try {
+        const proxyData = JSON.parse(data.proxyResponse);
+        const playUrl = extractPlayableUrl(proxyData);
 
-      // Type guard: check if proxyData is an object and has a list property
-      if (typeof proxyData === 'object' && proxyData !== null && 'list' in proxyData) {
-        // Log the full response for debugging
-        // eslint-disable-next-line no-console
-        console.log('API proxy response for play:', proxyData);
-        if (Array.isArray(proxyData.list) && proxyData.list.length > 0) {
-          // eslint-disable-next-line no-console
-          console.log('proxyData.list[0]:', proxyData.list[0]);
+        if (playUrl && mediaItem) {
+          const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
+          navigate(playerPath);
+        } else {
+          throw new Error("Could not find a playable URL in the response. See console for details.");
         }
-      } else {
-        // eslint-disable-next-line no-console
-        console.error('proxyData is not an object with a list property:', proxyData);
-        throw new Error('Response did not contain a valid list. See console for details.');
+      } catch (e) {
+        console.error('Error in play mutation onSuccess handler:', e);
+        toast({
+          title: "Play Failed",
+          description: e instanceof Error ? e.message : "Could not process the response from the API. See console for details.",
+          variant: "destructive",
+        });
       }
-      // Log before extraction
-      const playUrl = extractPlayableUrl(proxyData);
-      if (playUrl && mediaItem) {
-        const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
-        navigate(playerPath);
-      } else {
-        throw new Error("Could not find a playable URL in the response. See console for details.");
-      }
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Error in play mutation onSuccess handler:', e);
-      toast({
-        title: "Play Failed",
-        description: e instanceof Error ? e.message : "Could not process the response from the API. See console for details.",
-        variant: "destructive",
-      });
-    }
-  },
+    },
     onError: (error) => {
         toast({
             title: "Play Failed",
@@ -368,10 +321,6 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
     );
   }
 
-  // If mediaItem is still null or undefined after loading, but no error, it might mean the item doesn't exist.
-  // However, the original code proceeds assuming mediaItem is available. We'll stick to that behavior.
-  // If mediaItem is truly null/undefined here, the subsequent rendering will likely cause errors.
-  // A more robust solution might involve handling this case explicitly if mediaId is valid but no data is returned.
   if (!mediaItem) {
     return (
       <Dialog open={isOpen} onOpenChange={() => onClose()}>
