@@ -40,7 +40,7 @@ function AppRouter() {
       <Route path="/add-media" component={AddMedia} />
       <Route path="/settings" component={Settings} />
       <Route path="/duplicates" component={DuplicatesPage} />
-      <Route path="/player"><PlayerPage /></Route>
+      <Route path="/player" component={PlayerPage} />
       <Route component={NotFound} />
     </Switch>
   );

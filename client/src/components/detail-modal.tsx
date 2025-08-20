@@ -112,6 +112,7 @@ const formatDuration = (seconds: number | null) => {
 };
 
 export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
+  const [playableUrl, setPlayableUrl] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -166,7 +167,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
     mutationFn: ({ apiId, mediaUrl }: { apiId: string, mediaUrl: string }) => getDownloadUrl(mediaId, apiId, mediaUrl),
     onSuccess: (data) => {
       try {
-        const proxyData = data; // data is the proxy response
+        const proxyData = JSON.parse(data.proxyResponse);
         let downloadUrl = null;
 
         switch (data.source) {
@@ -258,9 +259,8 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
         const proxyData = data; // data is the proxy response
         const playUrl = extractPlayableUrl(proxyData);
 
-        if (playUrl && mediaItem) {
-          const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
-          navigate(playerPath);
+        if (playUrl) {
+          setPlayableUrl(playUrl);
         } else {
           throw new Error("Could not find a playable URL in the response. See console for details.");
         }
@@ -298,7 +298,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
 
   if (mediaLoading) {
     return (
-      <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-surface-light border-slate-600">
           <div className="flex items-center justify-center h-96">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -310,7 +310,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
 
   if (mediaError) {
     return (
-      <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-surface-light border-slate-600">
           <div className="flex flex-col items-center justify-center h-96 text-destructive">
             <p>Error loading media: {mediaError.message}</p>
@@ -323,7 +323,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
 
   if (!mediaItem) {
     return (
-      <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-surface-light border-slate-600">
           <div className="flex items-center justify-center h-96">
             <p className="text-slate-400">Media item not found.</p>
@@ -336,7 +336,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
   const isFolder = mediaItem.type === "folder";
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => onClose()}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] bg-surface-light border-slate-600">
         <DialogDescription>
           {mediaItem && mediaItem.description ? mediaItem.description : "Media details and actions dialog."}
@@ -373,23 +373,33 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
           {/* Left Panel - Media Preview */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              {mediaItem.thumbnail ? (
-                <img
-                  src={mediaItem.thumbnail}
-                  alt={mediaItem.title}
-                  className="w-full h-full object-cover"
+              {playableUrl ? (
+                <VideoPlayer
+                  url={playableUrl}
+                  title={mediaItem.title}
+                  onClose={() => setPlayableUrl(null)}
                 />
               ) : (
-                <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                  <Video className="text-primary text-8xl" />
-                </div>
-              )}
-              {mediaItem.duration && (
-                <div className="absolute bottom-4 left-4 text-white">
-                  <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
-                    Duration: {formatDuration(mediaItem.duration)}
-                  </div>
-                </div>
+                <>
+                  {mediaItem.thumbnail ? (
+                    <img
+                      src={mediaItem.thumbnail}
+                      alt={mediaItem.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                      <Video className="text-primary text-8xl" />
+                    </div>
+                  )}
+                  {mediaItem.duration && (
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <div className="text-sm bg-black bg-opacity-70 px-2 py-1 rounded">
+                        Duration: {formatDuration(mediaItem.duration)}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
