@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, VolumeX, Maximize, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import Hls from "hls.js";
 
 interface VideoPlayerProps {
   url: string;
@@ -17,6 +18,36 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let hls: Hls | null = null;
+
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play();
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS error:', data);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      video.addEventListener('loadedmetadata', () => {
+        video.play();
+      });
+    }
+
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [url]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -84,7 +115,6 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
     <div className="relative w-full h-full bg-black">
       <video
         ref={videoRef}
-        src={url}
         className="w-full h-full"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
@@ -95,6 +125,7 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
           setShowControls(true);
           setTimeout(() => setShowControls(false), 3000);
         }}
+        playsInline
       />
       
       {/* Controls Overlay */}
