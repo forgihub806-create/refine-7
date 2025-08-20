@@ -124,7 +124,7 @@ const formatDuration = (seconds: number | null) => {
 };
 
 export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [playableUrl, setPlayableUrl] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -304,21 +304,9 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
         throw new Error('Response did not contain a valid list. See console for details.');
       }
       // Log before extraction
-      // eslint-disable-next-line no-console
-      console.log('Calling extractPlayableUrl with:', proxyData);
       const playUrl = extractPlayableUrl(proxyData);
-      // Always log the result, even if null
-      // eslint-disable-next-line no-console
-      console.log('Extracted playUrl for player (may be null):', playUrl);
-      if (playUrl && mediaItem) {
-        // Use hash routing in Electron
-        const isElectron = typeof window !== 'undefined' && window.electronEnv?.isElectron;
-        const playerPath = `/player?url=${encodeURIComponent(playUrl)}&title=${encodeURIComponent(mediaItem.title)}`;
-        if (isElectron) {
-          window.location.hash = playerPath;
-        } else {
-          navigate(playerPath);
-        }
+      if (playUrl) {
+        setPlayableUrl(playUrl);
       } else {
         throw new Error("Could not find a playable URL in the response. See console for details.");
       }
@@ -436,11 +424,11 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
           {/* Left Panel - Media Preview */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-              {isPlaying && mediaItem.downloadUrl ? (
+              {playableUrl ? (
                 <VideoPlayer
-                  url={mediaItem.downloadUrl}
+                  url={playableUrl}
                   title={mediaItem.title}
-                  onClose={() => setIsPlaying(false)}
+                  onClose={() => setPlayableUrl(null)}
                 />
               ) : (
                 <>
@@ -464,9 +452,14 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                         <Button
                           onClick={handlePlay}
+                          disabled={getPlayUrlMutation.isPending}
                           className="w-16 h-16 bg-primary rounded-full flex items-center justify-center hover:bg-primary/80"
                         >
-                          <Play className="text-white text-xl ml-1" />
+                          {getPlayUrlMutation.isPending ? (
+                            <RefreshCw className="w-6 h-6 animate-spin" />
+                          ) : (
+                            <Play className="text-white text-xl ml-1" />
+                          )}
                         </Button>
                       </div>
                       {mediaItem.duration && (
