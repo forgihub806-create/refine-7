@@ -166,7 +166,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
     mutationFn: ({ apiId, mediaUrl }: { apiId: string, mediaUrl: string }) => getDownloadUrl(mediaId, apiId, mediaUrl),
     onSuccess: (data) => {
       try {
-        const proxyData = JSON.parse(data.proxyResponse);
+        const proxyData = data; // data is the proxy response
         let downloadUrl = null;
 
         switch (data.source) {
@@ -255,7 +255,7 @@ export function DetailModal({ mediaId, isOpen, onClose }: DetailModalProps) {
     mutationFn: (apiId: string) => getDownloadUrl(mediaId, apiId, mediaItem!.url),
     onSuccess: (data) => {
       try {
-        const proxyData = JSON.parse(data.proxyResponse);
+        const proxyData = data; // data is the proxy response
         const playUrl = extractPlayableUrl(proxyData);
 
         if (playUrl && mediaItem) {
